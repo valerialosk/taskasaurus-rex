@@ -1,6 +1,4 @@
-from fastapi import APIRouter, Query
-from typing import Optional
-from datetime import datetime
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -28,7 +26,7 @@ async def create_task(
 @router.put("/{task_id}")
 async def update_task(
     task_id: int,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     return {"id": task_id, "title": title}
 

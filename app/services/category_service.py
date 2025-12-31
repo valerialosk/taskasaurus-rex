@@ -1,8 +1,7 @@
-from typing import List, Optional
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Category, Task, TaskStatus, TaskPriority
+from app.models import Category, Task
 
 
 class CategoryService:
@@ -10,12 +9,10 @@ class CategoryService:
         self.db = db
 
     async def get_categories(
-        self, 
-        skip: int = 0, 
-        limit: int = 100
-    ) -> tuple[List[Category], int]:
+        self, skip: int = 0, limit: int = 100
+    ) -> tuple[list[Category], int]:
         query = select(Category)
-        
+
         count_query = select(func.count()).select_from(Category)
         total = self.db.scalar(count_query)
 
@@ -25,9 +22,11 @@ class CategoryService:
 
         return categories, total
 
-    async def get_category(self, category_id: int) -> Optional[Category]:
-        query = select(Category).where(Category.id == category_id).options(
-            selectinload(Category.tasks)
+    async def get_category(self, category_id: int) -> Category | None:
+        query = (
+            select(Category)
+            .where(Category.id == category_id)
+            .options(selectinload(Category.tasks))
         )
         result = self.db.execute(query)
         return result.scalar_one_or_none()
@@ -36,8 +35,8 @@ class CategoryService:
         self,
         name: str,
         color: str = "#808080",
-        icon: Optional[str] = None,
-        description: Optional[str] = None,
+        icon: str | None = None,
+        description: str | None = None,
     ) -> Category:
         category = Category(
             name=name,
@@ -53,11 +52,11 @@ class CategoryService:
     async def update_category(
         self,
         category_id: int,
-        name: Optional[str] = None,
-        color: Optional[str] = None,
-        icon: Optional[str] = None,
-        description: Optional[str] = None,
-    ) -> Optional[Category]:
+        name: str | None = None,
+        color: str | None = None,
+        icon: str | None = None,
+        description: str | None = None,
+    ) -> Category | None:
         category = await self.get_category(category_id)
         if not category:
             return None
@@ -76,9 +75,7 @@ class CategoryService:
         return category
 
     async def delete_category(
-        self, 
-        category_id: int, 
-        reassign_to: Optional[int] = None
+        self, category_id: int, reassign_to: int | None = None
     ) -> bool:
         category = await self.get_category(category_id)
         if not category:
@@ -102,11 +99,8 @@ class CategoryService:
         return True
 
     async def get_category_tasks(
-        self, 
-        category_id: int, 
-        skip: int = 0, 
-        limit: int = 100
-    ) -> tuple[List[Task], int]:
+        self, category_id: int, skip: int = 0, limit: int = 100
+    ) -> tuple[list[Task], int]:
         query = select(Task).where(Task.category_id == category_id)
 
         count_query = select(func.count()).select_from(query.subquery())
@@ -145,4 +139,3 @@ class CategoryService:
             stats["by_priority"][task.priority.value] += 1
 
         return stats
-

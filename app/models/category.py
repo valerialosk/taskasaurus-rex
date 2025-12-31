@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy import Column, DateTime, Integer, String, func
 from sqlalchemy.orm import relationship
+
 from .base import Base
 
 
@@ -14,5 +15,6 @@ class Category(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    tasks = relationship("Task", back_populates="category", cascade="all, delete-orphan")
-
+    tasks = relationship(
+        "Task", back_populates="category", cascade="all, delete-orphan"
+    )
