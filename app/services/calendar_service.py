@@ -1,7 +1,7 @@
-from typing import List, Dict
-from datetime import datetime, date, timedelta
 from calendar import monthrange
-from sqlalchemy import select, and_, func
+from datetime import date, datetime, timedelta
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.models import Task, TaskStatus
@@ -15,12 +15,11 @@ class CalendarService:
         first_day = date(year, month, 1)
         last_day = date(year, month, monthrange(year, month)[1])
 
-        query = select(Task).where(
-            and_(
-                Task.due_date >= first_day,
-                Task.due_date <= last_day
-            )
-        ).order_by(Task.due_date.asc())
+        query = (
+            select(Task)
+            .where(and_(Task.due_date >= first_day, Task.due_date <= last_day))
+            .order_by(Task.due_date.asc())
+        )
 
         result = self.db.execute(query)
         tasks = result.scalars().all()
@@ -44,12 +43,11 @@ class CalendarService:
         week_start = target_date - timedelta(days=target_date.weekday())
         week_end = week_start + timedelta(days=6)
 
-        query = select(Task).where(
-            and_(
-                Task.due_date >= week_start,
-                Task.due_date <= week_end
-            )
-        ).order_by(Task.due_date.asc())
+        query = (
+            select(Task)
+            .where(and_(Task.due_date >= week_start, Task.due_date <= week_end))
+            .order_by(Task.due_date.asc())
+        )
 
         result = self.db.execute(query)
         tasks = result.scalars().all()
@@ -57,12 +55,16 @@ class CalendarService:
         days = []
         current_day = week_start
         while current_day <= week_end:
-            day_tasks = [t for t in tasks if t.due_date and t.due_date.date() == current_day]
-            days.append({
-                "date": current_day.isoformat(),
-                "tasks": day_tasks,
-                "count": len(day_tasks)
-            })
+            day_tasks = [
+                t for t in tasks if t.due_date and t.due_date.date() == current_day
+            ]
+            days.append(
+                {
+                    "date": current_day.isoformat(),
+                    "tasks": day_tasks,
+                    "count": len(day_tasks),
+                }
+            )
             current_day += timedelta(days=1)
 
         return {
@@ -76,12 +78,11 @@ class CalendarService:
         start_datetime = datetime.combine(target_date, datetime.min.time())
         end_datetime = datetime.combine(target_date, datetime.max.time())
 
-        query = select(Task).where(
-            and_(
-                Task.due_date >= start_datetime,
-                Task.due_date <= end_datetime
-            )
-        ).order_by(Task.due_date.asc())
+        query = (
+            select(Task)
+            .where(and_(Task.due_date >= start_datetime, Task.due_date <= end_datetime))
+            .order_by(Task.due_date.asc())
+        )
 
         result = self.db.execute(query)
         tasks = result.scalars().all()
@@ -93,17 +94,13 @@ class CalendarService:
         }
 
     async def get_calendar_range(
-        self, 
-        start_date: date, 
-        end_date: date, 
-        group_by: str = "day"
+        self, start_date: date, end_date: date, group_by: str = "day"
     ) -> dict:
-        query = select(Task).where(
-            and_(
-                Task.due_date >= start_date,
-                Task.due_date <= end_date
-            )
-        ).order_by(Task.due_date.asc())
+        query = (
+            select(Task)
+            .where(and_(Task.due_date >= start_date, Task.due_date <= end_date))
+            .order_by(Task.due_date.asc())
+        )
 
         result = self.db.execute(query)
         tasks = result.scalars().all()
@@ -112,45 +109,55 @@ class CalendarService:
         if group_by == "day":
             current = start_date
             while current <= end_date:
-                day_tasks = [t for t in tasks if t.due_date and t.due_date.date() == current]
-                groups.append({
-                    "date": current.isoformat(),
-                    "tasks": day_tasks,
-                    "count": len(day_tasks)
-                })
+                day_tasks = [
+                    t for t in tasks if t.due_date and t.due_date.date() == current
+                ]
+                groups.append(
+                    {
+                        "date": current.isoformat(),
+                        "tasks": day_tasks,
+                        "count": len(day_tasks),
+                    }
+                )
                 current += timedelta(days=1)
         elif group_by == "week":
             current = start_date
             while current <= end_date:
                 week_end = min(current + timedelta(days=6), end_date)
                 week_tasks = [
-                    t for t in tasks 
+                    t
+                    for t in tasks
                     if t.due_date and current <= t.due_date.date() <= week_end
                 ]
-                groups.append({
-                    "week_start": current.isoformat(),
-                    "week_end": week_end.isoformat(),
-                    "tasks": week_tasks,
-                    "count": len(week_tasks)
-                })
+                groups.append(
+                    {
+                        "week_start": current.isoformat(),
+                        "week_end": week_end.isoformat(),
+                        "tasks": week_tasks,
+                        "count": len(week_tasks),
+                    }
+                )
                 current = week_end + timedelta(days=1)
         elif group_by == "month":
             current_month = start_date.replace(day=1)
             while current_month <= end_date:
                 month_end = date(
-                    current_month.year, 
-                    current_month.month, 
-                    monthrange(current_month.year, current_month.month)[1]
+                    current_month.year,
+                    current_month.month,
+                    monthrange(current_month.year, current_month.month)[1],
                 )
                 month_tasks = [
-                    t for t in tasks 
+                    t
+                    for t in tasks
                     if t.due_date and current_month <= t.due_date.date() <= month_end
                 ]
-                groups.append({
-                    "month": f"{current_month.year}-{current_month.month:02d}",
-                    "tasks": month_tasks,
-                    "count": len(month_tasks)
-                })
+                groups.append(
+                    {
+                        "month": f"{current_month.year}-{current_month.month:02d}",
+                        "tasks": month_tasks,
+                        "count": len(month_tasks),
+                    }
+                )
                 if current_month.month == 12:
                     current_month = date(current_month.year + 1, 1, 1)
                 else:
@@ -171,7 +178,7 @@ class CalendarService:
         created_query = select(Task).where(
             and_(
                 func.date(Task.created_at) >= start_date,
-                func.date(Task.created_at) <= end_date
+                func.date(Task.created_at) <= end_date,
             )
         )
         created_result = self.db.execute(created_query)
@@ -181,7 +188,7 @@ class CalendarService:
             and_(
                 Task.status == TaskStatus.COMPLETED,
                 func.date(Task.updated_at) >= start_date,
-                func.date(Task.updated_at) <= end_date
+                func.date(Task.updated_at) <= end_date,
             )
         )
         completed_result = self.db.execute(completed_query)
@@ -190,27 +197,33 @@ class CalendarService:
         daily_stats = []
         current = start_date
         while current <= end_date:
-            created_count = len([
-                t for t in created_tasks 
-                if t.created_at and t.created_at.date() == current
-            ])
-            completed_count = len([
-                t for t in completed_tasks 
-                if t.updated_at and t.updated_at.date() == current
-            ])
-            daily_stats.append({
-                "date": current.isoformat(),
-                "created": created_count,
-                "completed": completed_count,
-            })
+            created_count = len(
+                [
+                    t
+                    for t in created_tasks
+                    if t.created_at and t.created_at.date() == current
+                ]
+            )
+            completed_count = len(
+                [
+                    t
+                    for t in completed_tasks
+                    if t.updated_at and t.updated_at.date() == current
+                ]
+            )
+            daily_stats.append(
+                {
+                    "date": current.isoformat(),
+                    "created": created_count,
+                    "completed": completed_count,
+                }
+            )
             current += timedelta(days=1)
 
         total_created = len(created_tasks)
         total_completed = len(completed_tasks)
         completion_rate = (
-            (total_completed / total_created * 100) 
-            if total_created > 0 
-            else 0.0
+            (total_completed / total_created * 100) if total_created > 0 else 0.0
         )
 
         return {
@@ -223,4 +236,3 @@ class CalendarService:
                 "completion_rate": round(completion_rate, 2),
             },
         }
-

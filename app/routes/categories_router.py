@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-from typing import Optional
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
 
@@ -25,7 +24,7 @@ async def create_category(
 @router.put("/{category_id}")
 async def update_category(
     category_id: int,
-    name: Optional[str] = None,
+    name: str | None = None,
 ):
     return {"id": category_id, "name": name}
 

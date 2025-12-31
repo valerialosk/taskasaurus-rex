@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes.tasks_router import router as tasks_router
-from app.routes.categories_router import router as categories_router
 from app.routes.calendar_router import router as calendar_router
+from app.routes.categories_router import router as categories_router
+from app.routes.tasks_router import router as tasks_router
 
 app = FastAPI(
     title="Taskasaurus Rex",
@@ -36,7 +36,7 @@ app.include_router(calendar_router)
 async def root():
     """
     Базовый endpoint для проверки работоспособности API.
-    
+
     Возвращает:
     - **message**: Название API
     """
@@ -53,12 +53,12 @@ async def root():
 async def health_check():
     """
     Endpoint для мониторинга состояния сервиса.
-    
+
     Используется для:
     - Проверки доступности API
     - Интеграции с системами мониторинга
     - Load balancer health checks
-    
+
     Возвращает:
     - **status**: Текущее состояние сервиса
     """

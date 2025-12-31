@@ -1,9 +1,9 @@
-from typing import List, Optional
-from datetime import datetime, date, timedelta
-from sqlalchemy import select, and_, or_, func
+from datetime import date, datetime, timedelta
+
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Task, TaskStatus, TaskPriority
+from app.models import Task, TaskPriority, TaskStatus
 
 
 class TaskService:
@@ -14,15 +14,15 @@ class TaskService:
         self,
         skip: int = 0,
         limit: int = 100,
-        status: Optional[str] = None,
-        priority: Optional[str] = None,
-        category_id: Optional[int] = None,
-        search: Optional[str] = None,
-        date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None,
+        status: str | None = None,
+        priority: str | None = None,
+        category_id: int | None = None,
+        search: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
         sort_by: str = "created_at",
         order: str = "desc",
-    ) -> tuple[List[Task], int]:
+    ) -> tuple[list[Task], int]:
         query = select(Task).options(selectinload(Task.category))
 
         if status:
@@ -36,7 +36,7 @@ class TaskService:
             query = query.where(
                 or_(
                     Task.title.ilike(search_pattern),
-                    Task.description.ilike(search_pattern)
+                    Task.description.ilike(search_pattern),
                 )
             )
         if date_from:
@@ -59,10 +59,11 @@ class TaskService:
 
         return tasks, total
 
-    async def get_task(self, task_id: int) -> Optional[Task]:
-        query = select(Task).where(Task.id == task_id).options(
-            selectinload(Task.category),
-            selectinload(Task.subtasks)
+    async def get_task(self, task_id: int) -> Task | None:
+        query = (
+            select(Task)
+            .where(Task.id == task_id)
+            .options(selectinload(Task.category), selectinload(Task.subtasks))
         )
         result = self.db.execute(query)
         return result.scalar_one_or_none()
@@ -70,12 +71,12 @@ class TaskService:
     async def create_task(
         self,
         title: str,
-        description: Optional[str] = None,
+        description: str | None = None,
         priority: str = "medium",
         status: str = "pending",
-        category_id: Optional[int] = None,
-        due_date: Optional[datetime] = None,
-        parent_id: Optional[int] = None,
+        category_id: int | None = None,
+        due_date: datetime | None = None,
+        parent_id: int | None = None,
     ) -> Task:
         task = Task(
             title=title,
@@ -94,13 +95,13 @@ class TaskService:
     async def update_task(
         self,
         task_id: int,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        priority: Optional[str] = None,
-        status: Optional[str] = None,
-        category_id: Optional[int] = None,
-        due_date: Optional[datetime] = None,
-    ) -> Optional[Task]:
+        title: str | None = None,
+        description: str | None = None,
+        priority: str | None = None,
+        status: str | None = None,
+        category_id: int | None = None,
+        due_date: datetime | None = None,
+    ) -> Task | None:
         task = await self.get_task(task_id)
         if not task:
             return None
@@ -122,7 +123,7 @@ class TaskService:
         self.db.refresh(task)
         return task
 
-    async def update_task_status(self, task_id: int, status: str) -> Optional[Task]:
+    async def update_task_status(self, task_id: int, status: str) -> Task | None:
         task = await self.get_task(task_id)
         if not task:
             return None
@@ -141,12 +142,12 @@ class TaskService:
         self.db.commit()
         return True
 
-    async def get_subtasks(self, task_id: int) -> List[Task]:
+    async def get_subtasks(self, task_id: int) -> list[Task]:
         query = select(Task).where(Task.parent_id == task_id)
         result = self.db.execute(query)
         return result.scalars().all()
 
-    async def duplicate_task(self, task_id: int) -> Optional[Task]:
+    async def duplicate_task(self, task_id: int) -> Task | None:
         original = await self.get_task(task_id)
         if not original:
             return None
@@ -165,12 +166,14 @@ class TaskService:
         self.db.refresh(duplicate)
         return duplicate
 
-    async def get_overdue_tasks(self, skip: int = 0, limit: int = 100) -> tuple[List[Task], int]:
+    async def get_overdue_tasks(
+        self, skip: int = 0, limit: int = 100
+    ) -> tuple[list[Task], int]:
         now = datetime.now()
         query = select(Task).where(
             and_(
                 Task.due_date < now,
-                Task.status.not_in([TaskStatus.COMPLETED, TaskStatus.CANCELLED])
+                Task.status.not_in([TaskStatus.COMPLETED, TaskStatus.CANCELLED]),
             )
         )
 
@@ -184,18 +187,16 @@ class TaskService:
         return tasks, total
 
     async def get_upcoming_tasks(
-        self, 
-        days: int = 7, 
-        priority: Optional[str] = None
-    ) -> List[Task]:
+        self, days: int = 7, priority: str | None = None
+    ) -> list[Task]:
         now = datetime.now()
         future = now + timedelta(days=days)
-        
+
         query = select(Task).where(
             and_(
                 Task.due_date >= now,
                 Task.due_date <= future,
-                Task.status.not_in([TaskStatus.COMPLETED, TaskStatus.CANCELLED])
+                Task.status.not_in([TaskStatus.COMPLETED, TaskStatus.CANCELLED]),
             )
         )
 
@@ -207,17 +208,13 @@ class TaskService:
         return result.scalars().all()
 
     async def get_tasks_by_date_range(
-        self, 
-        start_date: date, 
-        end_date: date
-    ) -> List[Task]:
-        query = select(Task).where(
-            and_(
-                Task.due_date >= start_date,
-                Task.due_date <= end_date
-            )
-        ).order_by(Task.due_date.asc())
+        self, start_date: date, end_date: date
+    ) -> list[Task]:
+        query = (
+            select(Task)
+            .where(and_(Task.due_date >= start_date, Task.due_date <= end_date))
+            .order_by(Task.due_date.asc())
+        )
 
         result = self.db.execute(query)
         return result.scalars().all()
-
