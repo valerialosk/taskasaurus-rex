@@ -16,7 +16,7 @@ select = [
     "C4",
     "SIM",
 ]
-ignore = []
+ignore = ["B008"]  # FastAPI uses Depends() in defaults
 fixable = ["ALL"]
 
 [tool.mypy]

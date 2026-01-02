@@ -31,44 +31,26 @@ class CategoryService:
         result = self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def create_category(
-        self,
-        name: str,
-        color: str = "#808080",
-        icon: str | None = None,
-        description: str | None = None,
-    ) -> Category:
+    async def create_category(self, category_data) -> Category:
         category = Category(
-            name=name,
-            color=color,
-            icon=icon,
-            description=description,
+            name=category_data.name,
+            color=category_data.color if category_data.color else "#808080",
+            icon=category_data.icon,
+            description=category_data.description,
         )
         self.db.add(category)
         self.db.commit()
         self.db.refresh(category)
         return category
 
-    async def update_category(
-        self,
-        category_id: int,
-        name: str | None = None,
-        color: str | None = None,
-        icon: str | None = None,
-        description: str | None = None,
-    ) -> Category | None:
+    async def update_category(self, category_id: int, category_data) -> Category | None:
         category = await self.get_category(category_id)
         if not category:
             return None
 
-        if name is not None:
-            category.name = name
-        if color is not None:
-            category.color = color
-        if icon is not None:
-            category.icon = icon
-        if description is not None:
-            category.description = description
+        update_data = category_data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(category, field, value)
 
         self.db.commit()
         self.db.refresh(category)
