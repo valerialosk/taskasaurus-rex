@@ -68,56 +68,40 @@ class TaskService:
         result = self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def create_task(
-        self,
-        title: str,
-        description: str | None = None,
-        priority: str = "medium",
-        status: str = "pending",
-        category_id: int | None = None,
-        due_date: datetime | None = None,
-        parent_id: int | None = None,
-    ) -> Task:
+    async def create_task(self, task_data) -> Task:
         task = Task(
-            title=title,
-            description=description,
-            priority=TaskPriority(priority),
-            status=TaskStatus(status),
-            category_id=category_id,
-            due_date=due_date,
-            parent_id=parent_id,
+            title=task_data.title,
+            description=task_data.description,
+            priority=(
+                TaskPriority(task_data.priority)
+                if task_data.priority
+                else TaskPriority.MEDIUM
+            ),
+            status=(
+                TaskStatus(task_data.status) if task_data.status else TaskStatus.PENDING
+            ),
+            category_id=task_data.category_id,
+            due_date=task_data.due_date,
+            parent_id=task_data.parent_id,
         )
         self.db.add(task)
         self.db.commit()
         self.db.refresh(task)
         return task
 
-    async def update_task(
-        self,
-        task_id: int,
-        title: str | None = None,
-        description: str | None = None,
-        priority: str | None = None,
-        status: str | None = None,
-        category_id: int | None = None,
-        due_date: datetime | None = None,
-    ) -> Task | None:
+    async def update_task(self, task_id: int, task_data) -> Task | None:
         task = await self.get_task(task_id)
         if not task:
             return None
 
-        if title is not None:
-            task.title = title
-        if description is not None:
-            task.description = description
-        if priority is not None:
-            task.priority = TaskPriority(priority)
-        if status is not None:
-            task.status = TaskStatus(status)
-        if category_id is not None:
-            task.category_id = category_id
-        if due_date is not None:
-            task.due_date = due_date
+        update_data = task_data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            if field == "priority" and value:
+                setattr(task, field, TaskPriority(value))
+            elif field == "status" and value:
+                setattr(task, field, TaskStatus(value))
+            else:
+                setattr(task, field, value)
 
         self.db.commit()
         self.db.refresh(task)

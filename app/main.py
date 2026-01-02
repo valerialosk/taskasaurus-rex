@@ -1,9 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.db.database import engine
+from app.models.base import Base
 from app.routes.calendar_router import router as calendar_router
 from app.routes.categories_router import router as categories_router
 from app.routes.tasks_router import router as tasks_router
+
+# создаем таблицы в БД
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Taskasaurus Rex",
