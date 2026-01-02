@@ -28,14 +28,14 @@ async def get_week_calendar(target_date: date, db: Session = Depends(get_db)):
 @router.get("/day")
 async def get_day_calendar(target_date: date, db: Session = Depends(get_db)):
     service = CalendarService(db)
-    tasks_data = await service.get_day_tasks(target_date)
+    tasks_data = await service.get_day_calendar(target_date)
     return tasks_data
 
 
 @router.get("/today")
 async def get_today_tasks(db: Session = Depends(get_db)):
     service = CalendarService(db)
-    tasks_data = await service.get_day_tasks(date.today())
+    tasks_data = await service.get_today_tasks()
     return tasks_data
 
 
